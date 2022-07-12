@@ -12,30 +12,43 @@ provider = new ethers.providers.JsonRpcProvider(providerURL)
 wallet = new ethers.Wallet(myprivatekey)
 wallet = wallet.connect(provider)
 mycontract = new ethers.Contract(contractAddr, contractabi.result, wallet)
+transfer_amount = value.toString()
 
-wallet.getBalance().then((bal) => {
+// This serves two purposes: to see if we can connect to the wallet and 
+// to get the balance so we can check if the user has enough for GAS.
+wallet.getBalance().catch((x) => {
+	console.log("could not connect the wallet")
+}).then((bal) => {
 	if (bal <= 0) {
 		console.log("not enough balance")
 		return
 	}
  
-	mycontract.name().then((contractname) => {
-		console.log("connected to contract %s", contractname)
+	mycontract.balanceOf(wallet.address).catch(() => {
+		console.log("could not connect the contract")
+	}).then((mytokens) => {
+		console.log("connected to contract")
+		if(mytokens.lt(transfer_amount)){
+			console.log("not enough tokens")
+			return
+		}
 		
-		transfer_amount = value.toString()
 
 		// we say "ether" as this is usually the default number of decimals (18)
 		// but it may depend.
 		// we can get the number of decimals with contract.decimals()
 		converted_amount = ethers.utils.parseUnits(transfer_amount, "ether")
-
 		// Contract.transfer accepts a Number as value but we give it a BigNumber
 		// from ethers.utils.parseUnits because 10**18 is too large to be
 		// stored as a Number.
-		provider.getBalance(topublickey).then(()=>{
-			mycontract.transfer(topublickey, converted_amount).then(() => {
+		provider.getBalance(topublickey).catch(() => {
+			console.log("invalid destination address")
+		}).then(()=>{
+			mycontract.transfer(topublickey, converted_amount).catch(() => {
+				console.log("transfer fail - not enough gas")
+			}).then(() => {
 				console.log("transfer success")
-			}).catch(() => {console.log("transfer fail - not enough gas")})
-		}).catch(() => {console.log("invalid destination address")})
-	}).catch(() => {console.log("could not connect the contract")})
-}).catch(() => {console.log("could not connect the wallet")})
+			})
+		})
+	})
+})
