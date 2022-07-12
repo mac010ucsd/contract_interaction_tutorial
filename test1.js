@@ -13,16 +13,29 @@ wallet = new ethers.Wallet(myprivatekey)
 wallet = wallet.connect(provider)
 mycontract = new ethers.Contract(contractAddr, contractabi.result, wallet)
 
-mycontract.name().then((x) => {console.log("connected to contract %s", x)
+wallet.getBalance().then((bal) => {
+	if (bal <= 0) {
+		console.log("not enough balance")
+		return
+	}
+ 
+	mycontract.name().then((contractname) => {
+		console.log("connected to contract %s", contractname)
+		
+		transfer_amount = value.toString()
 
-	transfer_amount = value.toString()
+		// we say "ether" as this is usually the default number of decimals (18)
+		// but it may depend.
+		// we can get the number of decimals with contract.decimals()
+		converted_amount = ethers.utils.parseUnits(transfer_amount, "ether")
 
-	// we say "ether" as this is usually the default number of decimals (18)
-	// but it may depend.
-	// we can get the number of decimals with contract.decimals()
-	converted_amount = ethers.utils.parseUnits(transfer_amount, "ether")
-
-	mycontract.transfer(topublickey, converted_amount).then(() => {
-		console.log("transfer success")
-	}).catch(() => {console.log("could not transfer")})
-}).catch(() => {console.log("could not connect")})
+		// Contract.transfer accepts a Number as value but we give it a BigNumber
+		// from ethers.utils.parseUnits because 10**18 is too large to be
+		// stored as a Number.
+		provider.getBalance(topublickey).then(()=>{
+			mycontract.transfer(topublickey, converted_amount).then(() => {
+				console.log("transfer success")
+			}).catch(() => {console.log("transfer fail - not enough gas")})
+		}).catch(() => {console.log("invalid destination address")})
+	}).catch(() => {console.log("could not connect the contract")})
+}).catch(() => {console.log("could not connect the wallet")})
