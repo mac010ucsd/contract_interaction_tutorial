@@ -13,6 +13,10 @@ wallet = new ethers.Wallet(myprivatekey)
 wallet = wallet.connect(provider)
 mycontract = new ethers.Contract(contractAddr, contractabi.result, wallet)
 transfer_amount = value.toString()
+// we say "ether" as this is usually the default number of decimals (18)
+// but it may depend.
+// we can get the number of decimals with contract.decimals()
+converted_amount = ethers.utils.parseUnits(transfer_amount, "ether")
 
 // This serves two purposes: to see if we can connect to the wallet and 
 // to get the balance so we can check if the user has enough for GAS.
@@ -28,16 +32,12 @@ wallet.getBalance().catch((x) => {
 		console.log("could not connect the contract")
 	}).then((mytokens) => {
 		console.log("connected to contract")
-		if(mytokens.lt(transfer_amount)){
+		if(mytokens.lt(converted_amount)){
 			console.log("not enough tokens")
 			return
 		}
 		
 
-		// we say "ether" as this is usually the default number of decimals (18)
-		// but it may depend.
-		// we can get the number of decimals with contract.decimals()
-		converted_amount = ethers.utils.parseUnits(transfer_amount, "ether")
 		// Contract.transfer accepts a Number as value but we give it a BigNumber
 		// from ethers.utils.parseUnits because 10**18 is too large to be
 		// stored as a Number.
